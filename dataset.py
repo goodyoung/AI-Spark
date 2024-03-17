@@ -8,21 +8,19 @@ MAX_PIXEL_VALUE = 65535 # 이미지 정규화를 위한 픽셀 최대값
 def new_dataset(image):
     """ make new image (threshold)"""
     new_image = np.zeros_like(image[:, :, 0])
-    for (prob,idx) in [(0.4, 6), (0.4, 5), (0.4, 1), (0.3, 0)]:
+    for (prob,idx) in [(0.5, 6), (0.4, 5), (0.4, 1), (0.1, 0), (0.1, 4)]:
         new_image += prob * image[:, :, (idx)]
     return new_image
     
 def get_img_762bands(path):
     image = tiff.imread(path)
-    #img = image[:, :, (6, 5, 1)]#.astype(np.uint8)
-    img = np.float32(image)/MAX_PIXEL_VALUE # 정규화
+    img = np.float32(image) / MAX_PIXEL_VALUE  # 정규화
     img = new_dataset(img)
-    #print('processing')
-    return np.float32(img) 
+    return np.float32(img)
 
 def get_mask_arr(path):
     img = tiff.imread(path)
-    img = np.float32(img) # 정규화
+    img = np.float32(img)  # 정규화
     return img
 
 # BASE = '/content/gdrive/MyDrive/forest fire/dataset'
@@ -41,7 +39,7 @@ MODEL_SAVE = f'{SAVE_PATH}/best_UNet_Base_model.pth'
 
 
 class CustomDataset(Dataset):
-   def __init__(self, imgs_path: list, masks_path: list=None, transform=None, mode='train'):
+   def __init__(self, imgs_path: list, masks_path: list=None, transform=None, mode='train', ):
        self.imgs_path = imgs_path
        self.masks_path = masks_path
        self.transform = transform
@@ -52,21 +50,22 @@ class CustomDataset(Dataset):
 
    def __getitem__(self, idx):
        img_path = self.imgs_path[idx]
-       img = get_img_762bands(img_path)
+       #img = get_img_762bands(img_path, channel)
+       image = tiff.imread(img_path)
+       img = np.float32(image) / MAX_PIXEL_VALUE  # 정규화
+       img = np.float32(img)
        #print(img.shape)
-       img = np.reshape(img, (1, 256, 256))
-
        if self.transform:
            img = self.transform(img)
 
        if self.mode == 'train':
            mask_path = self.masks_path[idx]
            mask = get_mask_arr(mask_path)
-
            if self.transform:
                mask = self.transform(mask)
 
            mask = np.reshape(mask, (1, 256, 256))
+           mask = np.float32(mask)
            return img, mask
 
        elif self.mode == 'valid':
@@ -77,6 +76,7 @@ class CustomDataset(Dataset):
                mask = self.transform(mask)
 
            mask = np.reshape(mask, (1, 256, 256))
+           mask = np.float32(mask)
            return img, mask
 
        else:  # test
