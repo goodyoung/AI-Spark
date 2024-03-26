@@ -1,2 +1,0 @@
-## Segmentation 공부
----
